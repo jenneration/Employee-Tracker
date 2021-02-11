@@ -30,8 +30,9 @@ const startTracker = () => {
             "View All Departments",
             "View All Roles",
             "View All Employees",
-            "Add a New Department",
-            "Add a New Role",
+            "Add New Department",
+            "Add New Role",
+            "Add New Employee",
             "Delete an Existing Department"
         ],
     }).then((answer) => {
@@ -45,8 +46,14 @@ const startTracker = () => {
             case "View All Employees":
                 viewAllEmployees();
                 break;
-            case "Add a New Role":
+            case "Add New Department":
+                addNewDepartment();
+                break;
+            case "Add New Role":
                 addNewRole();
+                break;
+            case "Add New Employee":
+                addNewEmployee();
                 break;
             default:
                 console.log(`Invalid action ${answer.action}`);
@@ -67,7 +74,7 @@ const viewAllDepartments = () => {
 
 }
 
-// View All Roles: Compile-show ids, titles, salaries and associated departments
+// View All Roles: show id, title, salary, associated department
 const viewAllRoles = () => {
     connection.query("SELECT r.id, r.title, r.salary, department.name AS department FROM roles AS r INNER JOIN department ON r.dept_id  = department.id", (err, res) => {
         if (err) throw err;
@@ -76,7 +83,7 @@ const viewAllRoles = () => {
     });
 };
 
-// View All Employees
+// View All Employees: id, name, role, salary, manager, dept
 const viewAllEmployees = () => {
     connection.query("SELECT e.id, e.first_name, e.last_name, roles.title, roles.salary, department.name AS department, concat(m.first_name, ' ', m.last_name) AS manager FROM employee AS e JOIN employee AS m ON e.manager_id = m.id INNER JOIN roles ON e.role_id = roles.id INNER JOIN department ON roles.dept_id = department.id", (err, res) => {
         if (err) throw err;
@@ -119,8 +126,7 @@ const addNewDepartment = () => {
 
 //Add New Role
 const addNewRole = () => {
-
-    const choiceArray = [];
+    const deptArray = [];
     connection.query("SELECT id, name FROM department", (err, res) => {
         if (err) throw err;
 
@@ -133,6 +139,7 @@ const addNewRole = () => {
                     name: "roleSalary",
                     type: "input",
                     message: "Enter a valid SALARY for the New Role (between 20K and 250K): ",
+                    //TODO: Fix validation
                     validate(value) {
                         if (isNaN(value) === false || value > 20000 || value < 250000) {
                             return true;
@@ -145,25 +152,25 @@ const addNewRole = () => {
                     name: "choice",
                     type: "list",
                     choices() {
-                        //const choiceArray = [];
-                        res.forEach(({ id: id, name: name }) => {
-                            choiceArray.push({ id, name });
+                        //References deptArray at start of function
+                        res.forEach(({ id, name }) => {
+                            deptArray.push({ id, name });
                         });
-                        //console.log(choiceArray); //TEST
-                        return choiceArray;
+                        console.log("Inside choices " + deptArray); //TEST
+                        return deptArray;
                     },
                     message: "What is the DEPARTMENT for this role?"
                 }
 
             ])
             .then((answer) => {
-                // console.log(answer.choice);
-                console.log(choiceArray);
+                console.log("In answers " + deptArray); //TEST
                 let deptID;
-                for (i = 0; i < choiceArray.length; i++) {
-                    if (answer.choice == choiceArray[i].name) {
-                        deptID = choiceArray[i].id;
+                for (i = 0; i < deptArray.length; i++) {
+                    if (answer.choice === deptArray[i].name) {
+                        deptID = deptArray[i].id;
                     }
+                    console.log("dept ID " + deptID)
                 }
                 //console.log(`This is deptID ${deptID}`);//TEST
 
@@ -174,17 +181,88 @@ const addNewRole = () => {
                     },
                     (err, res) => {
                         if (err) throw err;
-                        console.log(`${answer.roleTitle} HAS BEEN ADDED TO COMPANY ROLES.`);
+                        console.log(`${answer.roleTitle} HAS BEEN ADDED TO COMPANY ROLES`);
                         startTracker();
                     });
+            });
+    });
+};
 
+//ADD NEW EMPLOYEE
+const addNewEmployee = () => {
+    const rolesArray = []; //to hold titles for choices display options
+    const roleObj = [] //to hold id + titles to grab role.id for sql INSERT
+    connection.query("SELECT id, title FROM roles", (err, res) => {
+        if (err) throw err;
+
+        inquirer.prompt([{
+                    name: "empFirstName",
+                    type: "input",
+                    message: "Please enter new employee FIRST NAME: ",
+                },
+                {
+                    name: "empLastName",
+                    type: "input",
+                    message: "Enter new employee LAST NAME: ",
+                },
+                {
+                    name: "choice",
+                    type: "list",
+                    choices() {
+                        res.forEach(({ id, title }) => {
+                            rolesArray.push(title);
+                            roleObj.push({ id, title });
+                        });
+                        // console.log(rolesArray); //TEST
+                        // console.log(roleObj);
+                        return rolesArray;
+                    },
+                    message: "Select new employee's ROLE: "
+                }
+
+            ])
+            .then((answer) => {
+                //console.log("Under Answers " + rolesArray); //TEST
+                let roleID;
+                for (let i = 0; i < roleObj.length; i++) {
+                    if (answer.choice === roleObj[i].title) {
+                        roleID = roleObj[i].id;
+                    };
+                    //console.log("Role id " + roleID);//TEST
+                };
+
+                // connection.query("SELECT concat(m.first_name, ' ', m.last_name) AS manager FROM employee AS e JOIN employee AS m ON e.manager_id = m.id", (err, res) => {
+                //     if (err) throw err;
+                //     const managerArray = [];
+
+                //     inquirer.prompt[({
+                //             name: "manager",
+                //             type: "list",
+                //             choices() {
+                //                 res.forEach(({ first_name, last_name }) => {
+                //                         rolesArray.push(`${first_name} ${last_name}`)
+                //                         roleObj.push({ id, title })
+                //                     },
+                //                     message: "Select new employee's MANAGER: "
+                //                 })]
+                //     });
+
+                connection.query("INSERT INTO employee SET ?", {
+                        first_name: answer.empFirstName,
+                        last_name: answer.empLastName,
+                        role_id: roleID
+                    },
+                    (err, res) => {
+                        if (err) throw err;
+                        console.log(`${answer.empFirstName} ${answer.empLastName} HAS BEEN ADDED TO COMPANY EMPLOYEES`);
+                        startTracker();
+                    });
             });
     });
 }
 
 
-
-//****************DELETIONS*************************
+// //****************DELETIONS*************************
 
 const deleteDepartment = () => {
     connection.query("SELECT * FROM department", (err, res) => {
