@@ -11,14 +11,12 @@ const connection = mysql.createConnection({
     // Your username
     user: 'root',
 
-    // Be sure to update with your own MySQL password!
+    //MySQL password and targeted DB
     password: 'password',
     database: 'midEarthInk_db',
 });
 
-
 //INITIALIZE APP
-
 const startTracker = () => {
     inquirer.prompt({
         name: "action",
@@ -32,6 +30,7 @@ const startTracker = () => {
             "Add New Role",
             "Add New Employee",
             "Update Employee Role",
+            "Update Employee Manager",
             "Delete an Existing Department"
         ],
     }).then((answer) => {
@@ -57,6 +56,9 @@ const startTracker = () => {
             case "Update Employee Role":
                 updateEmployeeRole();
                 break;
+            case "Update Employee Manager":
+                updateEmployeeManager();
+                break;
             default:
                 console.log(`Invalid action ${answer.action}`);
         };
@@ -65,8 +67,7 @@ const startTracker = () => {
 
 
 //****************READ*************************
-//View All Departments
-//TODO: Add all department budgets
+//View All Department: name and id
 const viewAllDepartments = () => {
     connection.query("SELECT id, name FROM department", (err, res) => {
         if (err) throw err;
@@ -97,7 +98,6 @@ const viewAllEmployees = () => {
 
 //****************CREATE*************************
 
-//TODO: DISPLAY ALL DEPARTMENTS: id, name, and **employee-combined budgets.
 //Add New Department
 const addNewDepartment = () => {
     inquirer.prompt({
@@ -176,7 +176,7 @@ const addNewRole = () => {
     });
 };
 
-//Add New Employee with role & mgr. id
+//Add New Employee with role and mgr. ids
 const addNewEmployee = () => {
     const roleQuery = "SELECT * FROM roles";
     const mgrQuery = "SELECT * FROM employee"
@@ -269,9 +269,10 @@ const addNewEmployee = () => {
     });
 };
 
-// //****************UPDATE*************************
-
+//****************UPDATE*************************
+//Update Employee Role
 const updateEmployeeRole = () => {
+    //Get employee for query 
     connection.query("SELECT * FROM employee", (err, res) => {
         if (err) throw err;
         inquirer
@@ -290,13 +291,14 @@ const updateEmployeeRole = () => {
             }, ]).then((answer) => {
                 let employee = answer.employee;
                 let empID;
+                //****REFACTOR THIS ?
                 res.filter((emp) => {
                     if (emp.first_name + " " + emp.last_name === answer.employee) {
                         console.log(emp.id)
                         return empID = emp.id;
                     };
                 });
-                ////////////////////////////
+                //Get roles for query
                 if (answer.employee != "") {
                     connection.query("SELECT * FROM roles", (err, res) => {
                         if (err) throw err;
@@ -309,19 +311,19 @@ const updateEmployeeRole = () => {
                                     res.forEach(({ title }) => {
                                         roleArray.push(title);
                                     });
-                                    console.log(res);
+                                    //console.log(res);
                                     return roleArray;
                                 },
                                 message: "What is their new role?"
                             }]).then((answer) => {
-                                console.log(res)
                                 let roleID;
                                 res.filter((newRole) => {
                                     if (newRole.title === answer.role) {
-                                        console.log(newRole.id)
+                                        //console.log(newRole.id)
                                         return roleID = newRole.id;
                                     };
                                 });
+                                //Update MySql DB
                                 connection.query("UPDATE employee SET ? WHERE ?", [{
                                         role_id: roleID,
                                     },
@@ -340,10 +342,79 @@ const updateEmployeeRole = () => {
     });
 };
 
+//Update Employee Manager
+const updateEmployeeManager = () => {
+    //Get employee for query 
+    connection.query("SELECT * FROM employee", (err, res) => {
+        if (err) throw err;
+        inquirer
+            .prompt([{
+                name: "employee",
+                type: "list",
+                choices() {
+                    let empArray = [];
+                    res.forEach(({ first_name, last_name }) => {
+                        empArray.push(first_name + " " + last_name);
+                    });
+                    return empArray;
+                },
+                message: "Which employee will you update?"
+            }, ]).then((answer) => {
+                let employee = answer.employee;
+                let empID;
+                //****Can i make this way shorter?
+                res.filter((emp) => {
+                    if (emp.first_name + " " + emp.last_name === answer.employee) {
+                        console.log(emp.id)
+                        return empID = emp.id;
+                    };
+                });
+                //Get employees for manager query
+                if (answer.employee != "") {
+                    connection.query("SELECT * FROM employee", (err, res) => {
+                        if (err) throw err;
+                        inquirer
+                            .prompt([{
+                                name: "manager",
+                                type: "list",
+                                choices() {
+                                    let mgrArray = [];
+                                    res.forEach(({ first_name, last_name }) => {
+                                        mgrArray.push(first_name + " " + last_name);
+                                    });
+                                    //console.log(res);
+                                    return mgrArray;
+                                },
+                                message: "Select employee's new manager: "
+                            }]).then((answer) => {
+                                let mgrID;
+                                res.filter((newMgr) => {
+                                    if (newMgr.title === answer.manager) {
+                                        //console.log(newRole.id)
+                                        return mgrID = newMgr.id;
+                                    };
+                                });
+                                //Update MySql DB
+                                connection.query("UPDATE employee SET ? WHERE ?", [{
+                                        manager_id: mgrID,
+                                    },
+                                    {
+                                        id: empID,
+                                    }
+                                ], (err, res) => {
+                                    if (err) throw err;
+                                    console.log(`${employee}'s manager has been changed to ${answer.manager}`)
+                                })
+                            })
+                    })
+                }
+
+            });
+    });
+};
 
 
 
-//"SELECT CONCAT(m.lastName, ', ', m.firstName) FROM employee e INNER JOIN employee m ON e.manager_id = m.id"
 
 
 
