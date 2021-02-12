@@ -1,8 +1,6 @@
 const mysql = require("mysql");
 const inquirer = require("inquirer");
 const cTable = require("console.table");
-const { restoreDefaultPrompts } = require("inquirer");
-
 
 const connection = mysql.createConnection({
     host: 'localhost',
@@ -33,6 +31,7 @@ const startTracker = () => {
             "Add New Department",
             "Add New Role",
             "Add New Employee",
+            "Update Employee Role",
             "Delete an Existing Department"
         ],
     }).then((answer) => {
@@ -55,6 +54,9 @@ const startTracker = () => {
             case "Add New Employee":
                 addNewEmployee();
                 break;
+            case "Update Employee Role":
+                updateEmployeeRole();
+                break;
             default:
                 console.log(`Invalid action ${answer.action}`);
         };
@@ -62,7 +64,7 @@ const startTracker = () => {
 };
 
 
-//****************VIEWS*************************
+//****************READ*************************
 //View All Departments
 //TODO: Add all department budgets
 const viewAllDepartments = () => {
@@ -93,21 +95,9 @@ const viewAllEmployees = () => {
     });
 };
 
+//****************CREATE*************************
 
-//****************FILTERED VIEWS*************************
-
-
-
-
-
-
-
-
-//****************ADDITIONS*************************
-
-//TODO: DISPLAY ALL DEPARTMENTS: Compile-show department ids, names, and employee-combined budgets.
-//const viewAllDepartments
-
+//TODO: DISPLAY ALL DEPARTMENTS: id, name, and **employee-combined budgets.
 //Add New Department
 const addNewDepartment = () => {
     inquirer.prompt({
@@ -124,7 +114,7 @@ const addNewDepartment = () => {
     })
 };
 
-//Add New Role
+//Add New Role with dept. id
 const addNewRole = () => {
     const deptArray = [];
     connection.query("SELECT id, name FROM department", (err, res) => {
@@ -141,7 +131,7 @@ const addNewRole = () => {
                     message: "Enter a valid SALARY for the New Role (between 20K and 250K): ",
                     //TODO: Fix validation
                     validate(value) {
-                        if (isNaN(value) === false || value > 20000 || value < 250000) {
+                        if (isNaN(value) === false || (value) > 20000 || value < 250000) {
                             return true;
                         }
                         console.log("Please enter a valid salary")
@@ -170,10 +160,8 @@ const addNewRole = () => {
                     if (answer.choice === deptArray[i].name) {
                         deptID = deptArray[i].id;
                     }
-                    console.log("dept ID " + deptID)
-                }
-                //console.log(`This is deptID ${deptID}`);//TEST
-
+                    //console.log("dept ID " + deptID)
+                };
                 connection.query("INSERT INTO roles SET ?", {
                         title: answer.roleTitle,
                         salary: answer.roleSalary,
@@ -188,7 +176,7 @@ const addNewRole = () => {
     });
 };
 
-///*****TEST ADD EMP */
+//Add New Employee with role & mgr. id
 const addNewEmployee = () => {
     const roleQuery = "SELECT * FROM roles";
     const mgrQuery = "SELECT * FROM employee"
@@ -219,14 +207,10 @@ const addNewEmployee = () => {
                 },
             ])
             .then((answer) => {
-                //console.log(res);
-                console.log(answer);
-                //console.log(roleObj);
-                //Grab role ID from answer
+                //console.log(answer);
                 const firstName = answer.empFirstName;
                 console.log(firstName);
                 const lastName = answer.empLastName;
-                console.log(lastName);
 
                 let roleID;
                 res.filter((role) => {
@@ -235,14 +219,6 @@ const addNewEmployee = () => {
                         return roleID = role.id;
                     };
                 });
-                // for (let i = 0; i < res.length; i++) {
-                //     if (res[i].title === answer.choice) {
-                //         roleID = res[i].id;
-                //     };
-                //     console.log("Role id " + roleID); //TEST
-                // };
-
-                //////////////////////////PART 2 ///////////////////
 
                 if (answer.choice != "") {
                     connection.query(mgrQuery, (err, res) => {
@@ -256,25 +232,20 @@ const addNewEmployee = () => {
                                     let mgrArray = ["Not Applicable"];
                                     res.forEach(({ id, first_name, last_name }) => {
                                         mgrArray.push(first_name + " " + last_name);
-                                        //mgrArray.push(`${first_name} ${last_name}`);
                                     });
-                                    //console.log(mgrArray);
                                     return mgrArray;
                                 },
                                 message: "Select the new employee's MANAGER: "
                             }]).then((answer) => {
-                                //console.log(res);
-                                console.log(answer.choice2)
+                                //console.log(answer.choice2)
                                 let mgrID;
                                 res.filter((mgr) => {
                                     if (mgr.first_name + " " + mgr.last_name === answer.choice2) {
                                         console.log(mgr.id);
                                         return mgrID = mgr.id;
-
                                     } else if (answer.choice2 === "Not Applicable") {
                                         return mgrID = "null";
                                     };
-                                    //console.log("THIS IS MGR ID " + mgr.id);//TEST 
 
                                 });
                                 connection.query("INSERT INTO employee SET ?", {
@@ -298,228 +269,81 @@ const addNewEmployee = () => {
     });
 };
 
-
-
-// console.log(res);
-// console.log(answer);
-// console.log(roleObj);
-// console.log("Under Answers " + rolesArray); //TEST
-//let roleID;
-//                     for (let i = 0; i < roleObj.length; i++) {
-//                         if (answer.choice === roleObj[i].title) {
-//                             roleID = roleObj[i].id;
-//                         };
-//                         console.log("Role id " + roleID); //TEST
-//                     };
-//     let holder = [];
-//     holder.push(answer);
-//     console.log(holder);
-//     connection.query(mgrQuery, (err, res) => {
-//             if (err) throw err;
-//             inquirer.prompt([{
-//                     name: "choice2",
-//                     type: "list",
-//                     choices() {
-//                         // let mgrArray = []; //to hold titles for choices display options
-//                         // let mgrObj = [] //to hold id + titles to grab role.id for sql INSERT
-//                         // res.forEach(({ id, first_name, last_name }) => {
-//                         //     mgrArray.push(first_name, last_name);
-//                         //     mgrObj.push({ id, first_name, last_name });
-//                             res.forEach(({ id, m.first_name, m.last_name }) => {
-//                                 mgrArray.push(`${first_name} ${last_name}`);
-//                                 mgrObj.push({ id, first_name, last_name });
-//                         });
-//                         console.log("This is in mgrQuery" + mgrArray); //TEST
-//                         console.log(mgrObj);
-//                         return mgrArray;
-//                     },
-//                     message: "Select new employee's MANAGER: "
-//                 }
-//             ]).then((answer) => {
-//                     
-//                     let mgID;
-//                     for (let i = 0; i < roleObj.length; i++) {
-//                         if (answer.choice2 === mgrObj[i].first_name) {
-//                             mgrID = mgrObj[i].id;
-//                         };
-//                         console.log("Role id " + roleID); //TEST
-//                     };
-
-//                     connection.query("INSERT INTO employee SET ?", {
-//                             first_name: answer.empFirstName,
-//                             last_name: answer.empLastName,
-//                             role_id: roleID,
-//                             manager_id: mgrID
-//                         },
-//                         (err, res) => {
-//                             if (err) throw err;
-//                             console.log(`${answer.empFirstName} ${answer.empLastName} HAS BEEN ADDED TO COMPANY EMPLOYEES`);
-//                             startTracker();
-//                 });
-//             }
-
-
-/////////////////////////////////////////////////////////////////////
-
-
-
-
-//TODO: ADD MANAGER ID TO NEW EMPLOYEE
-// connection.query("SELECT e.id, concat(m.first_name, ' ', m.last_name) FROM employee AS e LEFT JOIN employee AS m ON e.manager_id = m.id", (err, res) => {
-//     if (err) throw err;
-//     const mgrArray = [];
-//     const mgrObj = [];
-
-//     inquirer.prompt([{
-//             name: "manager",
-//             type: "list",
-//             choices() {
-//                 res.forEach(({ id, m.first_name, m.last_name }) => {
-//                     mgrArray.push(`${first_name} ${last_name}`);
-//                     mgrObj.push({ id, first_name, last_name });
-//                 });
-//                 console.log(mgrArray);
-//                 return mgrArray;
-//             },
-//             message: "Select new employee's MANAGER: "
-//         }])
-// .then((answer) => {
-//     let roleID;
-//     for (let i = 0; i < mgrObj.length; i++) {
-//         if (answer.choice === mgrObj[i]) {
-//             mgrID = mgrObj[i].id;
-//         };
-//         //console.log("Role id " + roleID);//TEST
-//     };
-
-//     connection.query("INSERT INTO employee SET ?", {
-//             first_name: answer.empFirstName,
-//             last_name: answer.empLastName,
-//             role_id: roleID,
-//             //manager_id: mgrID//TODO: FIX TO ADD MGR ID
-//         },
-//         (err, res) => {
-//             if (err) throw err;
-//             console.log(`${answer.empFirstName} ${answer.empLastName} HAS BEEN ADDED TO COMPANY EMPLOYEES`);
-//             startTracker();
-//         });
-// });
-//});
-
-
-
-
-
-
-
-
-//******ADD NEW EMPLOYEE ******WORKING
-// const addNewEmployee = () => {
-//     const rolesArray = []; //to hold titles for choices display options
-//     const roleObj = [] //to hold id + titles to grab role.id for sql INSERT
-//     connection.query("SELECT id, title FROM roles", (err, res) => {
-//         if (err) throw err;
-
-//         inquirer.prompt([{
-//                     name: "empFirstName",
-//                     type: "input",
-//                     message: "Please enter new employee FIRST NAME: ",
-//                 },
-//                 {
-//                     name: "empLastName",
-//                     type: "input",
-//                     message: "Enter new employee LAST NAME: ",
-//                 },
-//                 {
-//                     name: "choice",
-//                     type: "list",
-//                     choices() {
-//                         res.forEach(({ id, title }) => {
-//                             rolesArray.push(title);
-//                             roleObj.push({ id, title });
-//                         });
-//                         // console.log(rolesArray); //TEST
-//                         // console.log(roleObj);
-//                         return rolesArray;
-//                     },
-//                     message: "Select new employee's ROLE: "
-//                 }
-
-//             ])
-//             .then((answer) => {
-//                 // console.log(res);
-//                 // console.log(answer);
-//                 // console.log(roleObj);
-//                 // console.log("Under Answers " + rolesArray); //TEST
-//                 let roleID;
-//                 for (let i = 0; i < roleObj.length; i++) {
-//                     if (answer.choice === roleObj[i].title) {
-//                         roleID = roleObj[i].id;
-//                     };
-//                     //console.log("Role id " + roleID);//TEST
-//                 };
-
-//                 connection.query("INSERT INTO employee SET ?", {
-//                         first_name: answer.empFirstName,
-//                         last_name: answer.empLastName,
-//                         role_id: roleID,
-//                         //manager_id: mgrID//TODO: FIX TO ADD MGR ID
-//                     },
-//                     (err, res) => {
-//                         if (err) throw err;
-//                         console.log(`${answer.empFirstName} ${answer.empLastName} HAS BEEN ADDED TO COMPANY EMPLOYEES`);
-//                         startTracker();
-//                     });
-//                 //TODO: ADD MANAGER ID TO NEW EMPLOYEE
-//                 // connection.query("SELECT e.id, concat(m.first_name, ' ', m.last_name) FROM employee AS e LEFT JOIN employee AS m ON e.manager_id = m.id", (err, res) => {
-//                 //     if (err) throw err;
-//                 //     const mgrArray = [];
-//                 //     const mgrObj = [];
-
-//                 //     inquirer.prompt([{
-//                 //             name: "manager",
-//                 //             type: "list",
-//                 //             choices() {
-//                 //                 res.forEach(({ id, m.first_name, m.last_name }) => {
-//                 //                     mgrArray.push(`${first_name} ${last_name}`);
-//                 //                     mgrObj.push({ id, first_name, last_name });
-//                 //                 });
-//                 //                 console.log(mgrArray);
-//                 //                 return mgrArray;
-//                 //             },
-//                 //             message: "Select new employee's MANAGER: "
-//                 //         }])
-//                 // .then((answer) => {
-//                 //     let roleID;
-//                 //     for (let i = 0; i < mgrObj.length; i++) {
-//                 //         if (answer.choice === mgrObj[i]) {
-//                 //             mgrID = mgrObj[i].id;
-//                 //         };
-//                 //         //console.log("Role id " + roleID);//TEST
-//                 //     };
-
-//                 //     connection.query("INSERT INTO employee SET ?", {
-//                 //             first_name: answer.empFirstName,
-//                 //             last_name: answer.empLastName,
-//                 //             role_id: roleID,
-//                 //             //manager_id: mgrID//TODO: FIX TO ADD MGR ID
-//                 //         },
-//                 //         (err, res) => {
-//                 //             if (err) throw err;
-//                 //             console.log(`${answer.empFirstName} ${answer.empLastName} HAS BEEN ADDED TO COMPANY EMPLOYEES`);
-//                 //             startTracker();
-//                 //         });
-//                 // });
-//                 //});
-//             });
-//     });
-// };
-
-
 // //****************UPDATE*************************
-// const updateEmployeeRole = () => {
 
-// }
+const updateEmployeeRole = () => {
+    connection.query("SELECT * FROM employee", (err, res) => {
+        if (err) throw err;
+        inquirer
+            .prompt([{
+                name: "employee",
+                type: "list",
+                choices() {
+                    let empArray = [];
+                    res.forEach(({ first_name, last_name }) => {
+                        empArray.push(first_name + " " + last_name);
+                    });
+                    console.log(empArray);
+                    return empArray;
+                },
+                message: "Which employee will you update?"
+            }, ]).then((answer) => {
+                let employee = answer.employee;
+                let empID;
+                res.filter((emp) => {
+                    if (emp.first_name + " " + emp.last_name === answer.employee) {
+                        console.log(emp.id)
+                        return empID = emp.id;
+                    };
+                });
+                ////////////////////////////
+                if (answer.employee != "") {
+                    connection.query("SELECT * FROM roles", (err, res) => {
+                        if (err) throw err;
+                        inquirer
+                            .prompt([{
+                                name: "role",
+                                type: "list",
+                                choices() {
+                                    let roleArray = [];
+                                    res.forEach(({ title }) => {
+                                        roleArray.push(title);
+                                    });
+                                    console.log(res);
+                                    return roleArray;
+                                },
+                                message: "What is their new role?"
+                            }]).then((answer) => {
+                                console.log(res)
+                                let roleID;
+                                res.filter((newRole) => {
+                                    if (newRole.title === answer.role) {
+                                        console.log(newRole.id)
+                                        return roleID = newRole.id;
+                                    };
+                                });
+                                connection.query("UPDATE employee SET ? WHERE ?", [{
+                                        role_id: roleID,
+                                    },
+                                    {
+                                        id: empID,
+                                    }
+                                ], (err, res) => {
+                                    if (err) throw err;
+                                    console.log(`${employee}'s role has been changed to ${answer.role}`)
+                                })
+                            })
+                    })
+                }
+
+            });
+    });
+};
+
+
+
+
+//"SELECT CONCAT(m.lastName, ', ', m.firstName) FROM employee e INNER JOIN employee m ON e.manager_id = m.id"
 
 
 
@@ -527,7 +351,7 @@ const addNewEmployee = () => {
 
 
 
-// //****************DELETIONS*************************
+// //****************DELETE*************************
 //TODO: Double check
 const deleteDepartment = () => {
     connection.query("SELECT * FROM department", (err, res) => {
