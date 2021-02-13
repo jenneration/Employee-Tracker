@@ -23,6 +23,7 @@ const startTracker = () => {
         type: "list",
         message: "What would you like to do?",
         choices: [
+            "View Department Budgets",
             "View All Departments",
             "View All Roles",
             "View All Employees",
@@ -38,6 +39,9 @@ const startTracker = () => {
         ],
     }).then((answer) => {
         switch (answer.action) {
+            case "View Department Budgets":
+                viewDeptBudgets();
+                break;
             case "View All Departments":
                 viewAllDepartments();
                 break;
@@ -83,8 +87,26 @@ const startTracker = () => {
 
 //****************READ*************************
 //View All Department: name and id
+
+//View Departments and budgets based on employees in each 
+TODO
+const viewDeptBudgets = () => {
+    conn.query("SELECT department.name AS department, role.salary FROM employee e LEFT JOIN employee m ON e.manager_id = m.id INNER JOIN role ON e.role_id = role.id INNER JOIN department ON role.department_id = department.id ORDER BY department ASC"),
+        conn.query('SELECT name FROM department ORDER BY name ASC')
+
+    connection.query(query, (err, res) => {
+        if (err) throw err;
+        console.table(res);
+        startTracker();
+    })
+
+}
+
+
+
+
 const viewAllDepartments = () => {
-    connection.query("SELECT id, name FROM department", (err, res) => {
+    connection.query("SELECT id AS Dept_ID, name AS Department FROM department", (err, res) => {
         if (err) throw err;
         console.table(res);
         startTracker();
@@ -94,7 +116,7 @@ const viewAllDepartments = () => {
 
 // View All Roles: show id, title, salary, associated department
 const viewAllRoles = () => {
-    connection.query("SELECT r.id, r.title, r.salary, department.name AS department FROM roles AS r INNER JOIN department ON r.dept_id  = department.id", (err, res) => {
+    connection.query("SELECT r.id AS Role_IDs, r.title AS Titles, r.salary AS Salaries, department.name AS Departments FROM roles AS r INNER JOIN department ON r.dept_id  = department.id", (err, res) => {
         if (err) throw err;
         console.table(res);
         startTracker();
@@ -103,13 +125,22 @@ const viewAllRoles = () => {
 
 // View All Employees: id, name, role, salary, manager, dept
 const viewAllEmployees = () => {
-    connection.query("SELECT e.id, e.first_name, e.last_name, roles.title, roles.salary, department.name AS department, concat(m.first_name, ' ', m.last_name) AS manager FROM employee AS e JOIN employee AS m ON e.manager_id = m.id INNER JOIN roles ON e.role_id = roles.id INNER JOIN department ON roles.dept_id = department.id", (err, res) => {
+    connection.query("SELECT e.id AS Emp_ID, e.first_name AS First_Name, e.last_name AS Last_Name, roles.title AS Title, roles.salary AS Salary, department.name AS Department, concat(m.first_name, ' ', m.last_name) AS Manager FROM employee AS e JOIN employee AS m ON e.manager_id = m.id INNER JOIN roles ON e.role_id = roles.id INNER JOIN department ON roles.dept_id = department.id", (err, res) => {
         if (err) throw err;
         //Display results
         console.table(res);
         startTracker();
     });
 };
+
+
+const viewEmpByManager = () => {
+    connection.query("SELECT e.id AS EmpID, concat(e.first_name, ' ', e.last_name) AS Employee, concat(m.first_name,' ', m.last_name) AS Manager FROM employee AS e JOIN employee AS m ON e.manager_id = m.id ORDER BY e.manager_id ASC", (err, res) => {
+        if (err) throw err;
+        console.table(res);
+        startTracker();
+    });
+}
 
 //****************CREATE*************************
 
