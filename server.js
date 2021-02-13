@@ -491,16 +491,78 @@ const deleteRole = () => {
                         return roleID = role.id;
                     };
                 });
-                connection.query("DELETE FROM roles WHERE ?", { id: roleID }, (err, res) => {
-                    if (err) throw err;
-                    console.log(`**"${ answer.choice }" successfully deleted from Roles**`);
-                    startTracker();
+                inquirer.prompt([{
+                    name: "dblck",
+                    type: "list",
+                    message: "Confirm to delete this employee ",
+                    choices: ["Yes", "No"]
 
+                }]).then((answer) => {
+                    if (answer.dblck === "Yes") {
+                        connection.query("DELETE FROM roles WHERE ?", { id: roleID }, (err, res) => {
+                            if (err) throw err;
+                            console.log(`**"${answer.choice}" successfully deleted from Roles**`);
+                            startTracker();
+                        });
+                    } else {
+                        console.log("Let's begin again\n");
+                        startTracker();
+                    };
                 });
             });
     });
 
 };
+
+//Deletes Employee
+const deleteEmployee = () => {
+    connection.query("SELECT * FROM employee", (err, res) => {
+        if (err) throw err;
+        inquirer
+            .prompt([{
+                name: "choice",
+                type: "list",
+                choices() {
+                    let empArray = [];
+                    res.forEach(({ first_name, last_name }) => {
+                        empArray.push(first_name + " " + last_name);
+                    });
+                    return empArray;
+                },
+                message: "Which employee will you delete?",
+            }, ])
+            .then((answer) => {
+                let empID;
+                let emp = answer.choice
+                res.filter((emp) => {
+                    if (emp.first_name + " " + emp.last_name === answer.choice) {
+                        return empID = emp.id;
+                    };
+                });
+                inquirer.prompt([{
+                    name: "dblck",
+                    type: "list",
+                    message: "Confirm to delete this employee ",
+                    choices: ["Yes", "No"]
+
+                }]).then((answer) => {
+                    if (answer.dblck === "Yes") {
+                        connection.query("DELETE FROM employee WHERE ?", { id: empID }, (err, res) => {
+                            if (err) throw err;
+                            console.log(`**"${emp}" successfully deleted from Employees**`);
+                            startTracker();
+                        });
+                    } else {
+                        console.log("Let's begin again\n");
+                        startTracker();
+                    }
+                })
+
+            });
+    });
+
+};
+
 
 connection.connect((err) => {
     if (err) throw err;
