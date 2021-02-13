@@ -26,12 +26,15 @@ const startTracker = () => {
             "View All Departments",
             "View All Roles",
             "View All Employees",
+            "View Employee By Manager",
             "Add New Department",
             "Add New Role",
             "Add New Employee",
             "Update Employee Role",
             "Update Employee Manager",
-            "Delete an Existing Department"
+            "Delete a Department",
+            "Delete a Role",
+            "Delete an Employee"
         ],
     }).then((answer) => {
         switch (answer.action) {
@@ -43,6 +46,9 @@ const startTracker = () => {
                 break;
             case "View All Employees":
                 viewAllEmployees();
+                break;
+            case "View Employee By Manager":
+                viewEmpByManager();
                 break;
             case "Add New Department":
                 addNewDepartment();
@@ -58,6 +64,15 @@ const startTracker = () => {
                 break;
             case "Update Employee Manager":
                 updateEmployeeManager();
+                break;
+            case "Delete a Department":
+                deleteDepartment();
+                break;
+            case "Delete a Role":
+                deleteRole();
+                break;
+            case "Delete an Employee":
+                deleteEmployee();
                 break;
             default:
                 console.log(`Invalid action ${answer.action}`);
@@ -96,6 +111,16 @@ const viewAllEmployees = () => {
     });
 };
 
+
+//View Employees by Manager
+
+
+
+
+
+
+
+
 //****************CREATE*************************
 
 //Add New Department
@@ -103,12 +128,11 @@ const addNewDepartment = () => {
     inquirer.prompt({
         name: "newDept",
         type: "input",
-        message: "What DEPARTMENT would you like to add?"
+        message: "What department would you like to add?"
     }).then((answer) => {
         connection.query("INSERT INTO department SET ?", { name: answer.newDept }, (err, res) => {
             if (err) throw err;
-            console.log(`${ answer.newDept } HAS BEEN ADDED TO YOUR COMPANY DEPARTMENTS.`);
-            addNewDepartment();
+            console.log(`**"${ answer.newDept }" Successfully added to Departments**`);
             startTracker();
         })
     })
@@ -128,10 +152,10 @@ const addNewRole = () => {
                 {
                     name: "roleSalary",
                     type: "input",
-                    message: "Enter a valid SALARY for the New Role (between 20K and 250K): ",
+                    message: "What is the salary for the New Role: ",
                     //TODO: Fix validation
                     validate(value) {
-                        if (isNaN(value) === false || (value) > 20000 || value < 250000) {
+                        if (isNaN(value) === false && (value) > 20000 && value < 250000) {
                             return true;
                         }
                         console.log("Please enter a valid salary")
@@ -143,25 +167,24 @@ const addNewRole = () => {
                     type: "list",
                     choices() {
                         //References deptArray at start of function
-                        res.forEach(({ id, name }) => {
-                            deptArray.push({ id, name });
+                        res.forEach(({ name }) => {
+                            deptArray.push(name);
                         });
-                        console.log("Inside choices " + deptArray); //TEST
                         return deptArray;
                     },
-                    message: "What is the DEPARTMENT for this role?"
+                    message: "Select the Department for this role: "
                 }
 
             ])
             .then((answer) => {
-                console.log("In answers " + deptArray); //TEST
+                //console.log("In answers " + deptArray); //TEST
                 let deptID;
-                for (i = 0; i < deptArray.length; i++) {
-                    if (answer.choice === deptArray[i].name) {
-                        deptID = deptArray[i].id;
-                    }
-                    //console.log("dept ID " + deptID)
-                };
+                res.filter((dept) => {
+                    if (dept.name === answer.choice) {
+                        //console.log(newRole.id)
+                        return deptID = dept.id;
+                    };
+                });
                 connection.query("INSERT INTO roles SET ?", {
                         title: answer.roleTitle,
                         salary: answer.roleSalary,
@@ -169,7 +192,7 @@ const addNewRole = () => {
                     },
                     (err, res) => {
                         if (err) throw err;
-                        console.log(`${answer.roleTitle} HAS BEEN ADDED TO COMPANY ROLES`);
+                        console.log(`**"${answer.roleTitle}"** Successfully added to company Roles`);
                         startTracker();
                     });
             });
@@ -433,16 +456,22 @@ const deleteDepartment = () => {
                 name: "choice",
                 type: "rawlist",
                 choices() {
-                    const choiceArray = [];
-                    res.forEach(({ name }) => {
-                        choiceArray.push(name);
+                    const deptArray = [];
+                    res.forEach(({ id, name }) => {
+                        deptArray.push(`#${id} ${name}`);
                     });
-                    return choiceArray;
+                    return deptArray;
                 },
-                message: "Which DEPARTMENT will you DELETE?",
+                message: "Which department will you delete?",
             }])
             .then((answer) => {
-                console.log(answer); //TEST
+                let deptID;
+                for (i = 0; i < deptArray.length; i++) {
+                    if (answer.choice === deptArray[i].name) {
+                        deptID = deptArray[i].id;
+                    }
+                    //console.log("dept ID " + deptID)
+                };
                 connection.query("DELETE FROM department WHERE ?", { name: answer.choice }, (err, res) => {
                     if (err) throw err;
                     console.log(`${ answer.choice } HAS BEEN DELETED FROM YOUR COMPANY DEPARTMENTS.`);
