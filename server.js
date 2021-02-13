@@ -111,16 +111,6 @@ const viewAllEmployees = () => {
     });
 };
 
-
-//View Employees by Manager
-
-
-
-
-
-
-
-
 //****************CREATE*************************
 
 //Add New Department
@@ -192,7 +182,7 @@ const addNewRole = () => {
                     },
                     (err, res) => {
                         if (err) throw err;
-                        console.log(`**"${answer.roleTitle}"** Successfully added to company Roles`);
+                        console.log(`**"${answer.roleTitle}" successfully added to company Roles**`);
                         startTracker();
                     });
             });
@@ -208,25 +198,24 @@ const addNewEmployee = () => {
         inquirer.prompt([{
                     name: "empFirstName",
                     type: "input",
-                    message: "Please enter new employee FIRST NAME: ",
+                    message: "Enter new employee First Name: ",
                 },
                 {
                     name: "empLastName",
                     type: "input",
-                    message: "Enter new employee LAST NAME: ",
+                    message: "Enter new employee Last Name: ",
                 },
                 {
                     name: "choice",
                     type: "list",
                     choices() {
-                        let rolesArray = []; //to hold titles for choices display options
-                        res.forEach(({ id, title }) => {
+                        let rolesArray = []; //to hold titles for choices 
+                        res.forEach(({ title }) => {
                             rolesArray.push(title);
                         });
-                        console.log("This is in roleQuery " + rolesArray); //TEST
                         return rolesArray;
                     },
-                    message: "Select new employees's ROLE: "
+                    message: "What is new employee's Role?"
                 },
             ])
             .then((answer) => {
@@ -258,7 +247,7 @@ const addNewEmployee = () => {
                                     });
                                     return mgrArray;
                                 },
-                                message: "Select the new employee's MANAGER: "
+                                message: "Who is new employee's Manager?"
                             }]).then((answer) => {
                                 //console.log(answer.choice2)
                                 let mgrID;
@@ -278,7 +267,7 @@ const addNewEmployee = () => {
                                     manager_id: mgrID
                                 }, (err, res) => {
                                     if (err) throw err;
-                                    console.log(`${firstName} ${lastName} HAS BEEN ADDED TO COMPANY EMPLOYEES`);
+                                    console.log(`**"${firstName} ${lastName}" successfully added to company Employees**`);
                                     startTracker();
                                 })
 
@@ -355,11 +344,12 @@ const updateEmployeeRole = () => {
                                     }
                                 ], (err, res) => {
                                     if (err) throw err;
-                                    console.log(`${employee}'s role has been changed to ${answer.role}`)
+                                    console.log(`**${employee}'s role successfully changed to ${answer.role}**`)
                                 })
                             })
                     })
                 }
+
 
             });
     });
@@ -426,7 +416,8 @@ const updateEmployeeManager = () => {
                                     }
                                 ], (err, res) => {
                                     if (err) throw err;
-                                    console.log(`${employee}'s manager has been changed to ${answer.manager}`)
+                                    console.log(`**${employee}'s Successfully updated to ${answer.manager}**`);
+                                    startTracker();
                                 })
                             })
                     })
@@ -436,17 +427,8 @@ const updateEmployeeManager = () => {
     });
 };
 
-
-
-
-
-
-
-
-
-
 // //****************DELETE*************************
-//TODO: Double check
+//Deletes department
 const deleteDepartment = () => {
     connection.query("SELECT * FROM department", (err, res) => {
         if (err) throw err;
@@ -454,7 +436,7 @@ const deleteDepartment = () => {
         inquirer
             .prompt([{
                 name: "choice",
-                type: "rawlist",
+                type: "list",
                 choices() {
                     const deptArray = [];
                     res.forEach(({ id, name }) => {
@@ -466,15 +448,16 @@ const deleteDepartment = () => {
             }])
             .then((answer) => {
                 let deptID;
-                for (i = 0; i < deptArray.length; i++) {
-                    if (answer.choice === deptArray[i].name) {
-                        deptID = deptArray[i].id;
-                    }
-                    //console.log("dept ID " + deptID)
-                };
-                connection.query("DELETE FROM department WHERE ?", { name: answer.choice }, (err, res) => {
+                res.filter((dept) => {
+                    if (dept.title === answer.manager) {
+                        //console.log(newRole.id)
+                        return deptID = dept.id;
+                    };
+                });
+                //console.log("dept ID " + deptID)
+                connection.query("DELETE FROM department WHERE ?", { id: deptID }, (err, res) => {
                     if (err) throw err;
-                    console.log(`${ answer.choice } HAS BEEN DELETED FROM YOUR COMPANY DEPARTMENTS.`);
+                    console.log(`**"${ answer.choice }" successfully deleted from Departments**`);
                     startTracker();
 
                 });
@@ -482,19 +465,6 @@ const deleteDepartment = () => {
     });
 
 };
-
-
-
-//TEST CONNECTION
-const test2 = () => {
-    connection.query("SELECT * ", (err, res) => {
-        if (err) throw err;
-        console.table(res);
-        connection.end();
-    })
-}
-
-
 
 connection.connect((err) => {
     if (err) throw err;
