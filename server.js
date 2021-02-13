@@ -344,7 +344,8 @@ const updateEmployeeRole = () => {
                                     }
                                 ], (err, res) => {
                                     if (err) throw err;
-                                    console.log(`**${employee}'s role successfully changed to ${answer.role}**`)
+                                    console.log(`**${employee}'s role successfully changed to ${answer.role}**`);
+                                    startTracker();
                                 })
                             })
                     })
@@ -458,6 +459,41 @@ const deleteDepartment = () => {
                 connection.query("DELETE FROM department WHERE ?", { id: deptID }, (err, res) => {
                     if (err) throw err;
                     console.log(`**"${ answer.choice }" successfully deleted from Departments**`);
+                    startTracker();
+
+                });
+            });
+    });
+
+};
+
+//Deletes Role and associated employee
+const deleteRole = () => {
+    connection.query("SELECT * FROM roles", (err, res) => {
+        if (err) throw err;
+        inquirer
+            .prompt([{
+                name: "choice",
+                type: "list",
+                choices() {
+                    let rolesArray = [];
+                    res.forEach(({ title }) => {
+                        rolesArray.push(title);
+                    });
+                    return rolesArray;
+                },
+                message: "Which role will you delete?",
+            }])
+            .then((answer) => {
+                let roleID;
+                res.filter((role) => {
+                    if (role.title === answer.choice) {
+                        return roleID = role.id;
+                    };
+                });
+                connection.query("DELETE FROM roles WHERE ?", { id: roleID }, (err, res) => {
+                    if (err) throw err;
+                    console.log(`**"${ answer.choice }" successfully deleted from Roles**`);
                     startTracker();
 
                 });
