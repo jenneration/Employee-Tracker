@@ -2,6 +2,21 @@ const mysql = require("mysql");
 const inquirer = require("inquirer");
 const cTable = require("console.table");
 
+var colors = require("colors"); //npm pack for colors
+var figlet = require("figlet"); // or app header
+
+//make the initializer for figlet a sync function so it appears before app runs
+const message = (figlet.textSync("Employee Tracker", {
+
+    horizontalLayout: 'default',
+    verticalLayout: 'default',
+    width: 100,
+    whitespaceBreak: true
+}));
+
+console.log(message.rainbow.bold)
+
+//Create connection to db
 const connection = mysql.createConnection({
     host: 'localhost',
 
@@ -17,16 +32,23 @@ const connection = mysql.createConnection({
 });
 
 //INITIALIZE APP
+connection.connect((err) => {
+    if (err) throw err;
+    //console.log(`connected as id ${connection.threadId}`);
+    startTracker();
+});
+
+//App starter function
 const startTracker = () => {
     inquirer.prompt({
         name: "action",
         type: "list",
         message: "What would you like to do?",
         choices: [
-            "View Department Budgets",
-            "View All Departments",
-            "View All Roles",
-            "View All Employees",
+            //"View Department Budgets", -- Bonus 1 of 6, not done
+            "View Departments",
+            "View Roles",
+            "View Employees-Full Data",
             "View Employee By Manager",
             "Add New Department",
             "Add New Role",
@@ -39,17 +61,17 @@ const startTracker = () => {
         ],
     }).then((answer) => {
         switch (answer.action) {
-            case "View Department Budgets":
-                viewDeptBudgets();
+            //case "View All Department Budgets":
+            //viewDeptBudgets();
+            //break;
+            case "View Departments":
+                viewDepartments();
                 break;
-            case "View All Departments":
-                viewAllDepartments();
+            case "View Roles":
+                viewRoles();
                 break;
-            case "View All Roles":
-                viewAllRoles();
-                break;
-            case "View All Employees":
-                viewAllEmployees();
+            case "View Employees-Full Data":
+                viewEmployees();
                 break;
             case "View Employee By Manager":
                 viewEmpByManager();
@@ -87,12 +109,18 @@ const startTracker = () => {
 
 //****************READ*************************
 
-
 //TO DO: View Departments and budgets based on employees in each 
+//View Department budgets
+// const viewDeptBudgets = () => {
 
+//         if (err) throw err;
+//         console.table(res);
+//         startTracker();
+//     });
+// };
 
-//View All Department: name and id
-const viewAllDepartments = () => {
+//View All Department: name and id - use "AS" to format header names
+const viewDepartments = () => {
     connection.query("SELECT id AS Dept_ID, name AS Department FROM department", (err, res) => {
         if (err) throw err;
         console.table(res);
@@ -101,17 +129,17 @@ const viewAllDepartments = () => {
 
 }
 
-// View All Roles: show id, title, salary, associated department
-const viewAllRoles = () => {
-    connection.query("SELECT r.id AS Role_IDs, r.title AS Titles, r.salary AS Salaries, department.name AS Departments FROM roles AS r INNER JOIN department ON r.dept_id  = department.id", (err, res) => {
+// View All Roles: show id, title, salary, associated department - "AS" functions as header formatter and alias for self join.
+const viewRoles = () => {
+    connection.query("SELECT r.id AS Role_IDs, r.title AS Titles, r.salary AS Salaries, d.name AS Departments FROM roles AS r INNER JOIN department AS d ON r.dept_id  = d.id ORDER BY d.name ASC", (err, res) => {
         if (err) throw err;
         console.table(res);
         startTracker();
     });
 };
 
-// View All Employees: id, name, role, salary, manager, dept
-const viewAllEmployees = () => {
+// View All Employees & relate data: id, name, role, salary, mgr, dept - concat method used to join mgr name
+const viewEmployees = () => {
     connection.query("SELECT e.id AS Emp_ID, e.first_name AS First_Name, e.last_name AS Last_Name, roles.title AS Title, roles.salary AS Salary, department.name AS Department, concat(m.first_name, ' ', m.last_name) AS Manager FROM employee AS e JOIN employee AS m ON e.manager_id = m.id INNER JOIN roles ON e.role_id = roles.id INNER JOIN department ON roles.dept_id = department.id", (err, res) => {
         if (err) throw err;
         //Display results
@@ -119,7 +147,6 @@ const viewAllEmployees = () => {
         startTracker();
     });
 };
-
 
 const viewEmpByManager = () => {
     connection.query("SELECT e.id AS EmpID, concat(e.first_name, ' ', e.last_name) AS Employee, concat(m.first_name,' ', m.last_name) AS Manager FROM employee AS e JOIN employee AS m ON e.manager_id = m.id ORDER BY e.manager_id ASC", (err, res) => {
@@ -140,7 +167,7 @@ const addNewDepartment = () => {
     }).then((answer) => {
         connection.query("INSERT INTO department SET ?", { name: answer.newDept }, (err, res) => {
             if (err) throw err;
-            console.log(`**"${ answer.newDept }" Successfully added to Departments**`);
+            console.log(`**"${ answer.newDept }" successfully added to Departments**`.yellow);
             startTracker();
         })
     })
@@ -151,16 +178,15 @@ const addNewRole = () => {
     const deptArray = [];
     connection.query("SELECT id, name FROM department", (err, res) => {
         if (err) throw err;
-
         inquirer.prompt([{
                     name: "roleTitle",
                     type: "input",
-                    message: "What is the TITLE for the New Role: ",
+                    message: "What is the Title for the New Role: ",
                 },
                 {
                     name: "roleSalary",
                     type: "input",
-                    message: "What is the salary for the New Role: ",
+                    message: "What is the Salary for the New Role: ",
                     //TODO: Fix validation
                     validate(value) {
                         if (isNaN(value) === false && (value) > 20000 && value < 250000) {
@@ -182,10 +208,9 @@ const addNewRole = () => {
                     },
                     message: "Select the Department for this role: "
                 }
-
             ])
             .then((answer) => {
-                //console.log("In answers " + deptArray); //TEST
+                //Grab dept id of selected choice by filtering response
                 let deptID;
                 res.filter((dept) => {
                     if (dept.name === answer.choice) {
@@ -193,6 +218,7 @@ const addNewRole = () => {
                         return deptID = dept.id;
                     };
                 });
+                //Insert new role data into database
                 connection.query("INSERT INTO roles SET ?", {
                         title: answer.roleTitle,
                         salary: answer.roleSalary,
@@ -200,7 +226,7 @@ const addNewRole = () => {
                     },
                     (err, res) => {
                         if (err) throw err;
-                        console.log(`**"${answer.roleTitle}" successfully added to company Roles**`);
+                        console.log(`**"${answer.roleTitle}" successfully added to company Roles**`.yellow);
                         startTracker();
                     });
             });
@@ -211,6 +237,7 @@ const addNewRole = () => {
 const addNewEmployee = () => {
     const roleQuery = "SELECT * FROM roles";
     const mgrQuery = "SELECT * FROM employee"
+        //This query receives employee name and provides choices for their role
     connection.query(roleQuery, (err, res) => {
         if (err) throw err;
         inquirer.prompt([{
@@ -237,19 +264,17 @@ const addNewEmployee = () => {
                 },
             ])
             .then((answer) => {
-                //console.log(answer);
+                //Declare name info to use later for db insert
                 const firstName = answer.empFirstName;
-                console.log(firstName);
                 const lastName = answer.empLastName;
-
+                //Grab role id based on user's selection above
                 let roleID;
                 res.filter((role) => {
                     if (role.title === answer.choice) {
-                        console.log(role.id);
                         return roleID = role.id;
                     };
                 });
-
+                //Segue to next query to determine new emp's manager
                 if (answer.choice != "") {
                     connection.query(mgrQuery, (err, res) => {
                         if (err) throw err;
@@ -267,17 +292,18 @@ const addNewEmployee = () => {
                                 },
                                 message: "Who is new employee's Manager?"
                             }]).then((answer) => {
-                                //console.log(answer.choice2)
+                                //Grab manager id
                                 let mgrID;
                                 res.filter((mgr) => {
                                     if (mgr.first_name + " " + mgr.last_name === answer.choice2) {
                                         console.log(mgr.id);
                                         return mgrID = mgr.id;
                                     } else if (answer.choice2 === "Not Applicable") {
-                                        return mgrID = "null";
+                                        return mgrID = null;
                                     };
 
                                 });
+                                //Insert data into db
                                 connection.query("INSERT INTO employee SET ?", {
                                     first_name: firstName,
                                     last_name: lastName,
@@ -285,7 +311,7 @@ const addNewEmployee = () => {
                                     manager_id: mgrID
                                 }, (err, res) => {
                                     if (err) throw err;
-                                    console.log(`**"${firstName} ${lastName}" successfully added to company Employees**`);
+                                    console.log(`**"${firstName} ${lastName}" successfully added to company Employees**`.yellow);
                                     startTracker();
                                 })
 
@@ -314,7 +340,7 @@ const updateEmployeeRole = () => {
                     res.forEach(({ first_name, last_name }) => {
                         empArray.push(first_name + " " + last_name);
                     });
-                    console.log(empArray);
+                    //console.log(empArray);
                     return empArray;
                 },
                 message: "Which employee will you update?"
@@ -324,7 +350,7 @@ const updateEmployeeRole = () => {
                 //****REFACTOR THIS ?
                 res.filter((emp) => {
                     if (emp.first_name + " " + emp.last_name === answer.employee) {
-                        console.log(emp.id)
+                        //console.log(emp.id)
                         return empID = emp.id;
                     };
                 });
@@ -362,7 +388,7 @@ const updateEmployeeRole = () => {
                                     }
                                 ], (err, res) => {
                                     if (err) throw err;
-                                    console.log(`**${employee}'s role successfully changed to ${answer.role}**`);
+                                    console.log(`**${employee}'s role successfully changed to ${answer.role}**`.yellow);
                                     startTracker();
                                 })
                             })
@@ -397,7 +423,7 @@ const updateEmployeeManager = () => {
                 //****Can i make this way shorter?
                 res.filter((emp) => {
                     if (emp.first_name + " " + emp.last_name === answer.employee) {
-                        console.log(emp.id)
+                        //console.log(emp.id)
                         return empID = emp.id;
                     };
                 });
@@ -407,7 +433,7 @@ const updateEmployeeManager = () => {
                         if (err) throw err;
                         inquirer
                             .prompt([{
-                                name: "manager",
+                                name: "mgr",
                                 type: "list",
                                 choices() {
                                     let mgrArray = [];
@@ -421,9 +447,10 @@ const updateEmployeeManager = () => {
                             }]).then((answer) => {
                                 let mgrID;
                                 res.filter((newMgr) => {
-                                    if (newMgr.title === answer.manager) {
-                                        //console.log(newRole.id)
+                                    if (newMgr.first_name + " " + newMgr.last_name === answer.mgr) {
+                                        //console.log(newMgr.id);
                                         return mgrID = newMgr.id;
+
                                     };
                                 });
                                 //Update MySql DB
@@ -435,7 +462,7 @@ const updateEmployeeManager = () => {
                                     }
                                 ], (err, res) => {
                                     if (err) throw err;
-                                    console.log(`**${employee}'s Successfully updated to ${answer.manager}**`);
+                                    console.log(`**${employee}'s manager successfully updated to ${answer.mgr}**`.yellow);
                                     startTracker();
                                 })
                             })
@@ -458,28 +485,37 @@ const deleteDepartment = () => {
                 type: "list",
                 choices() {
                     const deptArray = [];
-                    res.forEach(({ id, name }) => {
-                        deptArray.push(`#${id} ${name}`);
+                    res.forEach(({ name }) => {
+                        deptArray.push(`${name}`);
                     });
                     return deptArray;
                 },
                 message: "Which department will you delete?",
             }])
             .then((answer) => {
+                let department = answer.choice;
                 let deptID;
                 res.filter((dept) => {
-                    if (dept.title === answer.manager) {
-                        //console.log(newRole.id)
+                    if (dept.name === answer.choice) {
+                        //console.log(answer);
+                        //console.log(dept.id);
                         return deptID = dept.id;
                     };
                 });
-                //console.log("dept ID " + deptID)
-                connection.query("DELETE FROM department WHERE ?", { id: deptID }, (err, res) => {
-                    if (err) throw err;
-                    console.log(`**"${ answer.choice }" successfully deleted from Departments**`);
-                    startTracker();
-
-                });
+                inquirer.prompt([{
+                    name: "dblck",
+                    type: "list",
+                    message: "Confirm to delete this department",
+                    choices: ["Yes", "No"]
+                }]).then((answer) => {
+                    if (answer.dblck === "Yes") {
+                        connection.query("DELETE FROM department WHERE ?", { id: deptID }, (err, res) => {
+                            if (err) throw err;
+                            console.log(`**"${ department}" successfully deleted from Departments**`.red);
+                            startTracker();
+                        });
+                    }
+                })
             });
     });
 
@@ -503,6 +539,7 @@ const deleteRole = () => {
                 message: "Which role will you delete?",
             }])
             .then((answer) => {
+                let deleted = answer.choice;
                 let roleID;
                 res.filter((role) => {
                     if (role.title === answer.choice) {
@@ -512,14 +549,14 @@ const deleteRole = () => {
                 inquirer.prompt([{
                     name: "dblck",
                     type: "list",
-                    message: "Confirm to delete this employee ",
+                    message: "Confirm to delete this role ",
                     choices: ["Yes", "No"]
 
                 }]).then((answer) => {
                     if (answer.dblck === "Yes") {
                         connection.query("DELETE FROM roles WHERE ?", { id: roleID }, (err, res) => {
                             if (err) throw err;
-                            console.log(`**"${answer.choice}" successfully deleted from Roles**`);
+                            console.log(`**"${deleted}" successfully deleted from Roles**`.red);
                             startTracker();
                         });
                     } else {
@@ -567,7 +604,7 @@ const deleteEmployee = () => {
                     if (answer.dblck === "Yes") {
                         connection.query("DELETE FROM employee WHERE ?", { id: empID }, (err, res) => {
                             if (err) throw err;
-                            console.log(`**"${emp}" successfully deleted from Employees**`);
+                            console.log(`**"${emp}" successfully deleted from Employees**`.red);
                             startTracker();
                         });
                     } else {
@@ -580,10 +617,3 @@ const deleteEmployee = () => {
     });
 
 };
-
-
-connection.connect((err) => {
-    if (err) throw err;
-    console.log(`connected as id ${connection.threadId}`);
-    startTracker();
-});

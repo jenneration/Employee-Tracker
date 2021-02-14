@@ -30,3 +30,5 @@ CREATE TABLE employee (
     FOREIGN KEY (manager_id) REFERENCES employee(id)
 );
 
+
+-- ON DELETE CASCADE nec. on employee table to allow emp. deletion when role is deleted. This was not nec. on roles when deleting a department.
